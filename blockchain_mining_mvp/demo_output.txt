@@ -1,0 +1,44 @@
+[Blockchain] Genesis Block erstellt: ee244fc888eeb9fc9944...
+
+--- 1. Mining: Chris erzeugt neue Coins ---
+[Mining] Starte Mining für Block #1...
+[Mining] ✅ Block gefunden: 0005cd7388b755423263f62a5fb5722cc8fcd3b87dc59c902d578860a34b8ccb
+Chris Balance: 50.0
+
+--- 2. Chris sendet 10 Coins an Marvin ---
+[Mempool] ✅ Transaktion hinzugefügt: CHRIS_WALLET -> MARVIN_WALLET: 10
+
+--- 3. Mining: offene Transaktion wird bestätigt ---
+[Mining] Starte Mining für Block #2...
+[Mining] ✅ Block gefunden: 00079ec27afe5851fa07c6279dcec47cc1c0f9981ce850e6b1fe9a095a86f2fb
+
+--- Balances ---
+Chris Balance: 90.0
+Marvin Balance: 10.0
+
+--- Chain gültig? ---
+✅ Ja
+
+--- Blockchain ---
+
+┌─ Block #0 ─────────────────────────────────
+│  Timestamp    : 2026-05-19T17:18:49.443090
+│  Nonce        : 0
+│  Data         : Genesis Block
+│  Previous Hash: 00000000000000000000...
+│  Hash         : ee244fc888eeb9fc9944...
+└──────────────────────────────────────────────────
+┌─ Block #1 ─────────────────────────────────
+│  Timestamp    : 2026-05-19T17:18:49.443239
+│  Nonce        : 11421
+│  Data         : [{'type': 'COINBASE', 'sender': 'SYSTEM', 'recipient': 'CHRIS_WALLET', 'amount': 50}]
+│  Previous Hash: ee244fc888eeb9fc9944...
+│  Hash         : 0005cd7388b755423263...
+└──────────────────────────────────────────────────
+┌─ Block #2 ─────────────────────────────────
+│  Timestamp    : 2026-05-19T17:18:49.546191
+│  Nonce        : 84
+│  Data         : [{'type': 'COINBASE', 'sender': 'SYSTEM', 'recipient': 'CHRIS_WALLET', 'amount': 50}, {'type': 'TRANSFER', 'sender': 'CHRIS_WALLET', 'recipient': 'MARVIN_WALLET', 'amount': 10}]
+│  Previous Hash: 0005cd7388b755423263...
+│  Hash         : 00079ec27afe5851fa07...
+└──────────────────────────────────────────────────
