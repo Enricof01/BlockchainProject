@@ -61,3 +61,10 @@ class Node:
         }
 
         return complete_transaction
+    
+        # Füge diese Methode einfach unten in deine Node-Klasse ein:
+
+    def run(self, debug=False):
+        print(f"🚀 Starte {self.node_name} auf Port {self.port}...")
+        # Hier wird der Port an Flask übergeben und nach außen geöffnet (exposed)
+        self.app.run(host="0.0.0.0", port=self.port, debug=debug)
