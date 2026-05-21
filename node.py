@@ -7,20 +7,22 @@ Hat-eine Blockchain (Aggregation).
 
 import json
 import hashlib
-
+from flask_cors import CORS
 import requests
 from flask import Flask, jsonify, request
 from cryptography.hazmat.primitives import serialization
 
-from wallet import verify_transaction, public_key_to_address
+from wallet.wallet import verify_transaction, public_key_to_address
 
 
 class Node:
-    def __init__(self, node_name: str, port: int, blockchain=None):
+    def __init__(self, node_name: str, port: int, blockchain=None, wallet=None):
         self.node_name  = node_name
         self.port       = port
         self.app        = Flask(node_name)
+        CORS(self.app)
         self.blockchain = blockchain   # has-a Beziehung
+        self.wallet     = wallet       # jede Node kann ein Wallet haben
         self.mempool    = []
         self.peers      = set()
         self.setup_routes()
@@ -193,6 +195,31 @@ class Node:
         return False, "Block von Blockchain abgelehnt."
 
     # --------------------------------------------------
+    # WALLET / SENDEN
+    # Jede Node kann Coins senden wenn sie ein Wallet hat
+    # --------------------------------------------------
+
+    def send(self, recipient: str, amount: float) -> tuple[bool, str]:
+        """Erstellt eine signierte TX und schickt sie in den Mempool + Broadcast."""
+        if self.wallet is None:
+            return False, "Diese Node hat kein Wallet."
+
+        from p2p import sync_chain
+        sync_chain(self)
+
+        available = self.get_available_balance(self.wallet.address)
+        if available < amount:
+            return False, f"Nicht genug Coins. Verfügbar: {available:.2f}"
+
+        tx_dict = self.wallet.create_transaction(recipient=recipient, amount=amount)
+        accepted, message = self.add_transaction_to_mempool(tx_dict)
+
+        if accepted:
+            self.broadcast_transaction(tx_dict)
+
+        return accepted, message
+
+    # --------------------------------------------------
     # ROUTES / API
     # --------------------------------------------------
 
@@ -266,8 +293,10 @@ class Node:
             block_data = request.get_json()
             accepted, message = self.add_received_block(block_data)
             return jsonify({"accepted": accepted, "message": message}), 200 if accepted else 400
+
         @self.app.route("/sync", methods=["POST"])
         def sync():
+            """Triggert manuell einen Chain-Sync mit allen bekannten Peers."""
             from p2p import sync_chain
             replaced = sync_chain(self)
             return jsonify({
@@ -275,6 +304,29 @@ class Node:
                 "chain_length": len(self.blockchain.chain),
                 "peers":        list(self.peers),
             })
+
+        @self.app.route("/wallet/info", methods=["GET"])
+        def wallet_info():
+            if self.wallet is None:
+                return jsonify({"message": "Kein Wallet verbunden."}), 400
+            return jsonify({
+                "address":           self.wallet.address,
+                "confirmed_balance": self.get_balance(self.wallet.address),
+                "pending_spent":     self.get_pending_spent_amount(self.wallet.address),
+                "available_balance": self.get_available_balance(self.wallet.address),
+            })
+
+        @self.app.route("/wallet/send", methods=["POST"])
+        def wallet_send():
+            if self.wallet is None:
+                return jsonify({"message": "Kein Wallet verbunden."}), 400
+            data      = request.get_json()
+            recipient = data.get("recipient")
+            amount    = data.get("amount")
+            if not recipient or amount is None:
+                return jsonify({"message": "recipient und amount erforderlich."}), 400
+            accepted, message = self.send(recipient=recipient, amount=float(amount))
+            return jsonify({"accepted": accepted, "message": message})
 
     def run(self, debug=False):
         print(f"[{self.node_name}] Starte auf Port {self.port}...")

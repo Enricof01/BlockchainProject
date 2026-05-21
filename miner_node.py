@@ -15,8 +15,8 @@ from p2p import sync_chain
 
 
 class MinerNode(Node):
-    def __init__(self, node_name: str, port: int, blockchain, miner_address: str):
-        super().__init__(node_name=node_name, port=port, blockchain=blockchain)
+    def __init__(self, node_name: str, port: int, blockchain, miner_address: str, wallet=None):
+        super().__init__(node_name=node_name, port=port, blockchain=blockchain, wallet=wallet)
         self.miner_address = miner_address   # Adresse die den Block-Reward bekommt
         self.mining        = False
         self._setup_miner_routes()
@@ -45,6 +45,7 @@ class MinerNode(Node):
             index         = len(self.blockchain.chain),
             transactions  = transactions,
             previous_hash = self.blockchain.last_block.hash,
+            difficulty    = self.blockchain.difficulty,   # ← aktuelle Difficulty
         )
 
         # PoW – das eigentliche Mining

@@ -27,6 +27,7 @@ class Block:
         previous_hash: str,
         nonce: int = 0,
         timestamp: str = "",
+        difficulty: int = 3,   # ← hinzufügen
     ):
         self.index         = index
         self.transactions  = transactions
@@ -34,6 +35,7 @@ class Block:
         self.nonce         = nonce
         self.timestamp     = timestamp or datetime.now(timezone.utc).isoformat()
         self.hash          = self.compute_hash()
+        self.difficulty    = difficulty 
 
     def compute_hash(self) -> str:
         block_content = json.dumps({
@@ -97,9 +99,15 @@ class Blockchain:
             sender    = "COINBASE",
             recipient = self.founder_address,
             amount    = GENESIS_REWARD,
+            timestamp = "2026-01-01T00:00:00+00:00", 
         )
-        genesis = Block(index=0, transactions=[coinbase], previous_hash="0" * 64)
-        # Genesis Block muss auch PoW erfüllen
+        genesis = Block(
+            index         = 0,
+            transactions  = [coinbase],
+            previous_hash = "0" * 64,
+            timestamp     = "2026-01-01T00:00:00+00:00",  # ← fest!
+            difficulty    = self.difficulty,
+    )        # Genesis Block muss auch PoW erfüllen
         from consensus import mine_block
         genesis = mine_block(genesis, self.difficulty)
         self.chain.append(genesis)

@@ -78,7 +78,7 @@ def main():
     parser = argparse.ArgumentParser(description="Blockchain Node starten")
     parser.add_argument("--type",   choices=["miner", "wallet"], default="miner",
                         help="Node-Typ: miner oder wallet")
-    parser.add_argument("--port",   type=int, default=3000,
+    parser.add_argument("--port",   type=int, default=5000,
                         help="Port der Node (default: 5000)")
     parser.add_argument("--name",   type=str, default="node_1",
                         help="Name der Node (default: node_1)")
@@ -109,6 +109,7 @@ def main():
             port           = args.port,
             blockchain     = blockchain,
             miner_address  = node_wallet.address,
+            wallet         = node_wallet,   # ← Wallet mitgeben
         )
         print(f"[Setup] Miner-Adresse: {node_wallet.address}")
 

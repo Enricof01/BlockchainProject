@@ -106,14 +106,13 @@ def test_chain_sync():
     len1_after = get_chain_length(NODE_1)
     print(f"  Node 1 Chain-Länge jetzt: {len1_after}")
 
-    # Node 2 sync triggern
-    print("\n  Node 2 sync triggern (POST /wallet/sync oder manuell mine)...")
+    # Node 2 sync triggern – direkt über /sync Endpunkt
+    print("\n  Node 2 sync triggern...")
     try:
-        requests.post(f"{NODE_2}/sync", timeout=5)
+        requests.post(f"{NODE_2}/sync", timeout=30)
     except Exception:
         pass
 
-    # kurz warten
     time.sleep(1)
 
     len2_after = get_chain_length(NODE_2)
@@ -145,6 +144,7 @@ def test_fork_handling():
     def mine_on(node_url, key):
         success = mine_block(node_url)
         results[key] = success
+        print("mining process")
 
     # Beide Nodes minen gleichzeitig
     print("\n  Beide Nodes minen gleichzeitig...")
@@ -163,7 +163,7 @@ def test_fork_handling():
     # Jetzt nochmal minen – der nächste Block löst den Fork auf
     print("\n  Node 1 mined weiteren Block → Fork sollte aufgelöst werden...")
     mine_block(NODE_1)
-    time.sleep(1)
+    time.sleep(5)
 
     len1_final = get_chain_length(NODE_1)
     len2_final = get_chain_length(NODE_2)
@@ -184,36 +184,46 @@ def test_fork_handling():
 def test_double_spend():
     separator("TEST 3: Double-Spend-Schutz")
 
-    # Frisches Wallet erstellen
-    attacker = Wallet()
-    victim   = Wallet()
-
-    print(f"  Angreifer: {attacker.address[:30]}...")
-    print(f"  Opfer    : {victim.address[:30]}...")
-
-    # Zuerst: Angreifer muss Coins bekommen
-    # Wir schauen ob er schon Balance hat (aus Mining-Rewards)
-    balance = get_balance(NODE_1, attacker.address)
-    print(f"\n  Angreifer-Balance: {balance} Coins")
-
-    if balance == 0:
-        print("  ℹ️  Angreifer hat keine Coins – Test mit verfügbarer Wallet")
-        print("  Hinweis: Für diesen Test brauchst du eine Adresse mit Coins.")
-        print("  Entweder den Miner-Node stoppen und dessen Wallet-Adresse nutzen,")
-        print("  oder zuerst einige Blöcke minen lassen damit Rewards ankommen.")
+    # Miner-Wallet über API laden
+    try:
+        info1 = requests.get(f"{NODE_1}/wallet/info", timeout=3).json()
+        attacker_address = info1["address"]
+        balance          = info1["available_balance"]
+    except Exception:
+        print("  ❌ Konnte Wallet-Info von Node 1 nicht laden")
+        print("  Hinweis: /wallet/info Endpunkt fehlt – node.py updaten")
         return
 
-    # TX 1: legitime Transaktion
-    tx1 = attacker.create_transaction(recipient=victim.address, amount=balance)
+    try:
+        attacker = Wallet.from_pem(open("miner_1.pem").read())
+    except FileNotFoundError:
+        print("  ❌ miner_1.pem nicht gefunden")
+        print("  Script im gleichen Ordner wie die .pem Dateien ausführen")
+        return
+
+    victim = Wallet()
+
+    print(f"  Angreifer : {attacker_address[:30]}...")
+    print(f"  Balance   : {balance} Coins")
+    print(f"  Opfer     : {victim.address[:30]}...")
+
+    if balance <= 0:
+        print("\n  ❌ Miner hat keine Coins – erst ein paar Blöcke minen")
+        return
+
+    send_amount = balance  # gesamte Balance ausgeben → echter Double-Spend Test
+
+    # TX 1: legitime Transaktion (gesamte Balance)
+    tx1 = attacker.create_transaction(recipient=victim.address, amount=send_amount)
     accepted1, msg1 = submit_tx(NODE_1, tx1)
-    print(f"\n  TX 1 (legitim, {balance} Coins) → Node 1: {accepted1} | {msg1}")
+    print(f"\n  TX 1 (legitim, {send_amount} Coins) → Node 1: {accepted1} | {msg1}")
 
-    # TX 2: gleiche Coins nochmal ausgeben (Double-Spend Versuch)
-    tx2 = attacker.create_transaction(recipient=victim.address, amount=balance)
+    # TX 2: gleiche Coins nochmal ausgeben (Double-Spend)
+    tx2 = attacker.create_transaction(recipient=victim.address, amount=send_amount)
     accepted2, msg2 = submit_tx(NODE_1, tx2)
-    print(f"  TX 2 (double-spend) → Node 1: {accepted2} | {msg2}")
+    print(f"  TX 2 (double-spend, {send_amount} Coins) → Node 1: {accepted2} | {msg2}")
 
-    # TX 3: gleiche Coins an andere Node schicken
+    # TX 1 nochmal an Node 2 schicken (Duplicate)
     accepted3, msg3 = submit_tx(NODE_2, tx1)
     print(f"  TX 1 nochmal → Node 2: {accepted3} | {msg3}")
 
@@ -226,7 +236,7 @@ def test_double_spend():
     if accepted1 and not accepted3:
         print("  Ergebnis: ✅ Duplicate TX auf anderer Node erkannt!")
     else:
-        print("  Ergebnis: ⚠️  Gleiche TX auf Node 2 akzeptiert (Broadcast-Sync prüfen)")
+        print("  Ergebnis: ⚠️  Gleiche TX auf Node 2 akzeptiert (Broadcast prüfen)")
 
     print(f"\n  Mempool Node 1: {get_mempool_size(NODE_1)} TXs")
     print(f"  Mempool Node 2: {get_mempool_size(NODE_2)} TXs")
