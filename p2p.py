@@ -100,7 +100,11 @@ def discover_peers(node, bootstrap_peers: list[str]):
     """
     Verbindet sich mit Bootstrap-Peers und holt deren Peer-Listen.
     Registriert die eigene Node bei jedem Peer.
+    Startet außerdem einen Background-Thread der sich nach dem
+    Flask-Start nochmal bei allen Peers registriert (Timing-Fix).
     """
+    import threading
+
     own_url = f"http://127.0.0.1:{node.port}"
 
     for peer in bootstrap_peers:
@@ -123,6 +127,22 @@ def discover_peers(node, bootstrap_peers: list[str]):
             pass
 
     print(f"[P2P] Bekannte Peers: {list(node.peers)}")
+
+    # Nach dem Flask-Start nochmal registrieren (Timing-Fix)
+    # Flask braucht ~1s bis er wirklich erreichbar ist
+    def delayed_register():
+        import time
+        time.sleep(2)
+        for peer in list(node.peers):
+            _register_at_peer(peer, own_url)
+            print(f"[P2P] Re-registriert bei: {peer}")
+        # Direkt beim Start auch Chain syncen
+        replaced = sync_chain(node)
+        if replaced:
+            print(f"[P2P] Chain beim Start synchronisiert.")
+
+    thread = threading.Thread(target=delayed_register, daemon=True)
+    thread.start()
 
 
 def _register_at_peer(peer_url: str, own_url: str):

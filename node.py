@@ -266,6 +266,15 @@ class Node:
             block_data = request.get_json()
             accepted, message = self.add_received_block(block_data)
             return jsonify({"accepted": accepted, "message": message}), 200 if accepted else 400
+        @self.app.route("/sync", methods=["POST"])
+        def sync():
+            from p2p import sync_chain
+            replaced = sync_chain(self)
+            return jsonify({
+                "synced":       replaced,
+                "chain_length": len(self.blockchain.chain),
+                "peers":        list(self.peers),
+            })
 
     def run(self, debug=False):
         print(f"[{self.node_name}] Starte auf Port {self.port}...")
