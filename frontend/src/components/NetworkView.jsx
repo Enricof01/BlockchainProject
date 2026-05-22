@@ -2,11 +2,16 @@ import { useContext } from 'react';
 import { BlockchainContext } from '../context/BlockchainContext';
 import { Card, Badge } from './ui';
 import { Server, Plus, X, Network } from 'lucide-react';
+import axios from "axios";
 
 export default function NetworkView() {
   const { nodes, activeNode, setActiveNode, addNode, removeNode, nodeStatus } = useContext(BlockchainContext);
 
   const onlineCount = Object.values(nodeStatus).filter(d => d.online).length;
+
+  async function mine(port) {
+    await axios.post(`http://127.0.0.1:${port}/mine`)
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -38,8 +43,10 @@ export default function NetworkView() {
               border: `1px solid ${activeNode === port ? 'rgba(243,186,47,0.4)' : '#1f1f29'}`,
               borderRadius: 16, padding: '1.25rem',
               cursor: 'pointer', transition: 'border-color 0.15s',
+
             }}
           >
+            <button onClick = {() => mine(port)}>mine</button>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: d.online ? 16 : 0 }}>
               <div>
                 <p style={{ fontWeight: 700, color: '#fff', fontSize: 14, marginBottom: 4 }}>

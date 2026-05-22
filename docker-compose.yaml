@@ -1,0 +1,28 @@
+
+services:
+  miner_1:
+    build: ./backend
+    ports:
+      - "5001:5001"
+    volumes:
+      - ./backend:/app
+    # uv führt das Skript aus und verbindet sich mit miner_2 über den Docker-Namen
+    command: uv run main_node.py --port 5001 --name miner_1 --peers http://miner_2:5002
+
+  miner_2:
+    build: ./backend
+    ports:
+      - "5002:5002"
+    volumes:
+      - ./backend:/app
+    command: uv run main_node.py --port 5002 --name miner_2 --peers http://miner_1:5001
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - CHOKIDAR_USEPOLLING=true
