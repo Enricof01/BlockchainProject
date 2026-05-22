@@ -28,7 +28,7 @@ from p2p import discover_peers
 #  FOUNDER WALLET
 # ─────────────────────────────────────────────
 
-FOUNDER_PEM_PATH = "founder.pem"
+FOUNDER_PEM_PATH = "keys/founder.pem"
 
 def load_or_create_founder_wallet() -> Wallet:
     """
@@ -55,7 +55,7 @@ def load_or_create_founder_wallet() -> Wallet:
 
 def load_or_create_node_wallet(name: str) -> Wallet:
     """Jede Node hat ihr eigenes Wallet (eigene Adresse für Rewards)."""
-    pem_path = f"{name}.pem"
+    pem_path = f"keys/{name}.pem"
 
     if os.path.exists(pem_path):
         with open(pem_path, "r") as f:
